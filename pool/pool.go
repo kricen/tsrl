@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -14,65 +13,55 @@ type Connection struct {
 
 // ObjectPool : connection's pool
 type ObjectPool struct {
-	connections map[*Connection]bool
+	connections []*Connection
 	rw          sync.RWMutex
+	// gnum        int64
+	// anum        int64
+	// total       int64
 }
 
 // NewPool : generate a object pool
 func NewPool() *ObjectPool {
-	conns := make(map[*Connection]bool, 0)
+	conns := make([]*Connection, 0)
 	op := &ObjectPool{connections: conns}
-	go op.recycling()
+	// go op.recycling()
 	return op
 }
 
 // AccessConnection : get a connection from pool
 func (o *ObjectPool) AccessConnection(url string) *Connection {
-	o.rw.RLock()
-	defer o.rw.RUnlock()
-	for k, v := range o.connections {
-		if !v {
-			o.connections[k] = true
-			k.name = url
-			k.updateTime = time.Now().Unix()
-			return k
-		}
+	o.rw.Lock()
+	defer o.rw.Unlock()
+	// atomic.AddInt64(&o.total, 1)
+	if len(o.connections) > 0 {
+		// atomic.AddInt64(&o.anum, 1)
+		v := o.connections[0]
+		// fmt.Println("reuse:", &v)
+		v.name = url
+		v.updateTime = time.Now().Unix()
+		o.connections = o.connections[1:]
+		return v
 	}
+	// atomic.AddInt64(&o.gnum, 1)
 	conn := &Connection{name: url, updateTime: time.Now().Unix()}
-	o.connections[conn] = true
 	return conn
 }
 
 // ReleaseConnection : release connection
 func (o *ObjectPool) ReleaseConnection(conn *Connection) {
-	o.rw.RLock()
-	defer o.rw.RUnlock()
-	if _, ok := o.connections[conn]; ok {
-		fmt.Println("存在啊啊啊啊")
-		o.connections[conn] = false
-	} else {
-		fmt.Println("不存在啊啊啊 啊 ")
-	}
-
+	o.rw.Lock()
+	defer o.rw.Unlock()
+	// fmt.Println("release:", &conn)
+	o.connections = append(o.connections, conn)
 }
 
 // recycling : recycling the idle connection
 func (o *ObjectPool) recycling() {
-	tick := time.Tick(15 * time.Second)
+	tick := time.Tick(1 * time.Second)
 	for {
 		select {
 		case <-tick:
-			o.rw.Lock()
-			defer o.rw.Unlock()
-			timeNow := time.Now().Add(-120 * time.Second).Unix()
-			for k, v := range o.connections {
-				if !v {
-					if k.updateTime > timeNow {
-						delete(o.connections, k)
-					}
-				}
-			}
+			// fmt.Println("reuse num:", o.anum, " produce num:", o.gnum, " total:", o.total)
 		}
-
 	}
 }

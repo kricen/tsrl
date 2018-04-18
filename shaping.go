@@ -24,14 +24,14 @@ import (
 )
 
 const (
-	redisSetName = "tshaping_sort_set"
+	redisHashName = "tshaping_hash"
 )
 
 // TrafficShaping :
 type TrafficShaping struct {
 	burst       int            //default burst size, when beyond the size,wait until burst is not overflow
 	shapingMap  map[string]int // interface: max-burst
-	connections pool.ObjectPool
+	connections *pool.ObjectPool
 }
 
 // InitShaping : when use traffic shaping Algorithm init first
@@ -42,17 +42,26 @@ func InitShaping(serviceName, host, port, password string, maxBurst int, special
 	ts = &TrafficShaping{burst: maxBurst, shapingMap: specialShaping}
 	db.InitRedis(serviceName, host, port, password)
 
-	// init shaping environment
+	// init shaping environment : clear pre work-environment
 	conn := db.GetRedisConn()
-	conn.Do("", "")
+	conn.Do("del", redisHashName)
 	defer conn.Close()
 
+	// init connection pool
+	op := pool.NewPool()
+	ts.connections = op
 	return
 }
 
 // AccessConn : borrow a connection to user
-func (t *TrafficShaping) AccessConn() {
+func (t *TrafficShaping) AccessConn(url string) *pool.Connection {
 	// Notice : maybe occur a codition : cache-breakdown
+
+	return nil
+}
+
+// CloseConn : return a connection which borrow from pool
+func (t *TrafficShaping) CloseConn(conn *pool.Connection) {
 
 }
 
