@@ -19,7 +19,13 @@
 package tshaping
 
 import (
+	"errors"
+	"sync"
+	"time"
+
+	"github.com/garyburd/redigo/redis"
 	"github.com/kricen/tshaping/db"
+
 	"github.com/kricen/tshaping/pool"
 )
 
@@ -27,11 +33,16 @@ const (
 	redisHashName = "tshaping_hash"
 )
 
+var (
+	ErrTimeout = errors.New("timeout")
+)
+
 // TrafficShaping :
 type TrafficShaping struct {
-	burst       int            //default burst size, when beyond the size,wait until burst is not overflow
-	shapingMap  map[string]int // interface: max-burst
-	connections *pool.ObjectPool
+	burst       int              //default burst size, when beyond the size,wait until burst is not overflow
+	shapingMap  map[string]int   // interface: max-burst
+	connections *pool.ObjectPool // object pool
+	mu          sync.RWMutex     // redis addon cann't performance well in concurrent circumstance, so need mutex to handle that
 }
 
 // InitShaping : when use traffic shaping Algorithm init first
@@ -44,7 +55,10 @@ func InitShaping(serviceName, host, port, password string, maxBurst int, special
 
 	// init shaping environment : clear pre work-environment
 	conn := db.GetRedisConn()
-	conn.Do("del", redisHashName)
+	_, err = conn.Do("del", redisHashName)
+	if err != nil {
+		return nil, err
+	}
 	defer conn.Close()
 
 	// init connection pool
@@ -54,15 +68,32 @@ func InitShaping(serviceName, host, port, password string, maxBurst int, special
 }
 
 // AccessConn : borrow a connection to user
-func (t *TrafficShaping) AccessConn(url string) *pool.Connection {
-	// Notice : maybe occur a codition : cache-breakdown
-
-	return nil
+func (t *TrafficShaping) AccessConn(url string) (pool *pool.Connection, err error) {
+	err = t.accessConnFromRedis(url)
+	if err != nil {
+		return
+	}
+	pool = t.connections.AccessConnection(url)
+	return
 }
 
 // CloseConn : return a connection which borrow from pool
-func (t *TrafficShaping) CloseConn(conn *pool.Connection) {
+func (t *TrafficShaping) CloseConn(conn *pool.Connection) (err error) {
 
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	redisConn := db.GetRedisConn()
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("HINCRBY", redisHashName, conn.Name, -1)
+	if err != nil {
+		return
+	}
+	// release conn
+	t.connections.ReleaseConnection(conn)
+
+	return
 }
 
 // CloseShaping : release the resources when use over
@@ -76,4 +107,34 @@ func (t *TrafficShaping) AddUpdateShaping(specialShaping map[string]int) {
 	for k, v := range specialShaping {
 		t.shapingMap[k] = v
 	}
+}
+
+func (t *TrafficShaping) accessConnFromRedis(url string) (err error) {
+	var (
+		onlineNumber int
+	)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	conn := db.GetRedisConn()
+	defer conn.Close()
+
+	for i := 0; i < 5; i++ {
+		onlineNumber, err = redis.Int(conn.Do("HINCRBY", redisHashName, url, 1))
+		if err != nil {
+			return
+		}
+		if _, ok := t.shapingMap[url]; !ok {
+			t.shapingMap[url] = t.burst
+		}
+		if onlineNumber > t.shapingMap[url] {
+			conn.Do("HINCRBY", redisHashName, url, -1)
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		return nil
+
+	}
+
+	return ErrTimeout
 }

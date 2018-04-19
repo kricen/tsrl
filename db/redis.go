@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 )
 
 var pool *redis.Pool
@@ -31,8 +31,10 @@ var pool *redis.Pool
 // register the redis pool
 func newPool(server string, password string) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
+		MaxIdle:     25,
+		MaxActive:   50,
+		Wait:        true,
+		IdleTimeout: 200 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
