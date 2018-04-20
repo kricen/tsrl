@@ -18,7 +18,7 @@ const (
 )
 
 func initRedis() {
-	InitRedis("", "", "", "")
+	InitRedis("", "", "")
 
 }
 

@@ -20,6 +20,7 @@ package tshaping
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -34,6 +35,7 @@ const (
 )
 
 var (
+	//ErrTimeout ： global error
 	ErrTimeout = errors.New("timeout")
 )
 
@@ -48,10 +50,16 @@ type TrafficShaping struct {
 // InitShaping : when use traffic shaping Algorithm init first
 // because the achievement based on redis, need to registe a
 // redis pool
-func InitShaping(serviceName, host, port, password string, maxBurst int, specialShaping map[string]int) (ts *TrafficShaping, err error) {
+func InitShaping(host, port, password string, maxBurst int, specialShaping map[string]int) (ts *TrafficShaping, err error) {
 	// db.InitRedis()
+	if maxBurst <= 0 {
+		maxBurst = 600
+	}
+	if specialShaping == nil {
+		specialShaping = make(map[string]int, 0)
+	}
 	ts = &TrafficShaping{burst: maxBurst, shapingMap: specialShaping}
-	db.InitRedis(serviceName, host, port, password)
+	db.InitRedis(host, port, password)
 
 	// init shaping environment : clear pre work-environment
 	conn := db.GetRedisConn()
@@ -122,18 +130,20 @@ func (t *TrafficShaping) accessConnFromRedis(url string) (err error) {
 	for i := 0; i < 5; i++ {
 		onlineNumber, err = redis.Int(conn.Do("HINCRBY", redisHashName, url, 1))
 		if err != nil {
+			fmt.Printf("Oops1:%s\n", err.Error())
 			return
 		}
 		if _, ok := t.shapingMap[url]; !ok {
 			t.shapingMap[url] = t.burst
 		}
+
 		if onlineNumber > t.shapingMap[url] {
+			fmt.Printf("Oops11:%d,%d\n", onlineNumber, t.shapingMap[url])
 			conn.Do("HINCRBY", redisHashName, url, -1)
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 		return nil
-
 	}
 
 	return ErrTimeout

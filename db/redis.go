@@ -58,7 +58,7 @@ func newPool(server string, password string) *redis.Pool {
 }
 
 // InitRedis : init redis pool with some param
-func InitRedis(svcName, host, port, password string) {
+func InitRedis(host, port, password string) {
 	redishost := getValue(host, "127.0.0.1")
 	redisport := getValue(port, "6379")
 	redispwd := getValue(password, "")
