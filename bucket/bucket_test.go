@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkNew(t *testing.B) {
-	bucket := New(10, 5*time.Second)
+	bucket := New(100, 5*time.Second)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 1000; i++ {
@@ -20,8 +20,8 @@ func BenchmarkNew(t *testing.B) {
 				fmt.Printf("Oops,work %d is Err: %s\n", i, err.Error())
 				return
 			}
-			//time.Sleep(1 * time.Second)
-			//fmt.Println("fine,comelete the work:", i)
+			time.Sleep(200 * time.Millisecond)
+			fmt.Println("fine,comelete the work:", i)
 			bucket.ReleaseToken(token)
 		}(i)
 	}
