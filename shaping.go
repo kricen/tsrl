@@ -47,6 +47,9 @@ type TrafficShaping struct {
 	mu          sync.RWMutex     // redis addon cann't performance well in concurrent circumstance, so need mutex to handle that
 }
 
+// idea : don't need to use redis ,can use sync.map[chan]interface{} to complete the
+// limit funciton
+
 // InitShaping : when use traffic shaping Algorithm init first
 // because the achievement based on redis, need to registe a
 // redis pool
