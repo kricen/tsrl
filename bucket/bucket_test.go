@@ -8,10 +8,10 @@ import (
 )
 
 func BenchmarkNew(t *testing.B) {
-	bucket := New(100, 5*time.Second)
+	bucket := New(10, 5*time.Second)
 	var wg sync.WaitGroup
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -20,13 +20,37 @@ func BenchmarkNew(t *testing.B) {
 				fmt.Printf("Oops,work %d is Err: %s\n", i, err.Error())
 				return
 			}
-			time.Sleep(200 * time.Millisecond)
-			fmt.Println("fine,comelete the work:", i)
+
+			//fmt.Println("fine,comelete the work:", i)
 			bucket.ReleaseToken(token)
 		}(i)
 	}
 
 	wg.Wait()
 	fmt.Printf("maxSize:%d,vacantSize:%d,undistributedSize:%d\n", bucket.maxSize, bucket.vacantSize, bucket.undistributedSize)
+
+}
+
+func TestNewRLBucket(t *testing.T) {
+	bucket := NewRLBucket(10, 5*time.Second)
+	//time.Sleep(1 * time.Second)
+	for i := 0; i < 10; i++ {
+		go func() {
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+			bucket.BorrowToken(0)
+		}()
+		fmt.Println(i)
+		time.Sleep(1 * time.Second)
+	}
 
 }

@@ -16,7 +16,6 @@ package bucket
 
 import (
 	"errors"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -35,8 +34,6 @@ type Bucket struct {
 	maxSize           int64
 	vacantSize        int64
 	undistributedSize int64
-	vsRWM             sync.RWMutex
-	udsRWM            sync.RWMutex
 	RWChan            chan interface{}
 	timeoutDuration   time.Duration
 }
@@ -57,27 +54,14 @@ func New(maxSize int64, timeoutDuration time.Duration) *Bucket {
 	return bucket
 }
 
-// get this value need read-write mutex
-func (b *Bucket) getVacantSize() int64 {
-	b.vsRWM.RLock()
-	defer b.vsRWM.RUnlock()
-	return b.vacantSize
-}
-
-// get this value need read-write mutex
-func (b *Bucket) getUndistributedSize() int64 {
-	b.udsRWM.RLock()
-	defer b.udsRWM.RUnlock()
-	return b.undistributedSize
-}
-
 // BorrowToken : access token from bucket.
 // Specification : if timeoutDruation is little than zero , program will set timeoutDruation equals Buckte's
 //                  timeoutDruation set in init , while  if not set when function init, timeoutDruation is
 //                  a default value : 3 seconds
 func (b *Bucket) BorrowToken(timeoutDruation time.Duration) (token interface{}, err error) {
 	// check undistributedSize is great than zero ,if gt 0 , produce a token
-	if uds := b.getUndistributedSize(); uds > 0 {
+
+	if uds := atomic.LoadInt64(&b.undistributedSize); uds > 0 {
 		val := atomic.AddInt64(&b.undistributedSize, -1)
 		if val < 0 {
 			atomic.AddInt64(&b.undistributedSize, 1)
