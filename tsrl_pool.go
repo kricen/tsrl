@@ -13,3 +13,39 @@
 // under the License.
 
 package tsrl
+
+import (
+	"time"
+
+	"github.com/kricen/tsrl/cmap"
+	"github.com/kricen/tsrl/model"
+)
+
+//BucketPool : add , remove ,ReleaseToken ,BorrowToken
+type BucketPool struct {
+	bmap cmap.ConcurrentMap
+}
+
+//New :
+func New() (pool *BucketPool) {
+	bmap := cmap.New()
+	pool = &BucketPool{bmap: bmap}
+	return
+}
+
+// GetBucket :
+func (b *BucketPool) GetBucket(url string) (bk *model.Bucket) {
+	tmp, ok := b.bmap.Get(url)
+	if !ok {
+		bk = b.AddBucket(url, 0, 0)
+		return
+	}
+	bk, _ = tmp.(*model.Bucket)
+	return
+}
+
+// AddBucket : Add Traffic Shaping
+func (b *BucketPool) AddBucket(url string, maxSize int64, timeoutDuration time.Duration) (bk *model.Bucket) {
+
+	return
+}
