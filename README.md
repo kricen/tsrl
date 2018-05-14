@@ -5,11 +5,10 @@
 
 ## TSRL
 
-TSRL:
-tsrl contains two parts : traffic shaping and rate limit.
+ it contains two types bucket  : traffic shaping and rate limit. 
 
 
-### tsrl flow
+### Tsrl flow
 
 ![](./images/tsrl.png)
 
@@ -25,7 +24,7 @@ tsrl contains two parts : traffic shaping and rate limit.
   // get the token from bucket and do the job you need to do
 
   token, err := bucket.BorrowToken("key")
-  
+
   // when finish you job ,you should release the token
 
   	bucket.ReleaseToken(token)
