@@ -5,7 +5,7 @@
 
 ## TSRL
 
- it contains two types bucket  : traffic shaping and rate limit. 
+ it contains two types bucket  : traffic shaping and rate limit.
 
 
 ### Tsrl flow
@@ -27,6 +27,6 @@
 
   // when finish you job ,you should release the token
 
-  	bucket.ReleaseToken(token)
+  bucket.ReleaseToken(token)
 
 ```
