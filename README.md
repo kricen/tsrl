@@ -14,14 +14,14 @@
 
 ### How to use
 ```
-  // first access a new buckets pool which manage the buckets
+  // first access a new buckets pool to manage the buckets
 
   pool := New()
   // get a bucket ,if not exists ,program will create a new bucket ,put it into pool and return
 
   bucket := pool.AddBucket("hello", 500, 5*time.Second,model.BUCKET_TYPE_TRAFFIC_SHAPING)
 
-  // get the token from bucket and do your job 
+  // get the token from bucket and do your job
 
   token, err := bucket.BorrowToken("key")
 
