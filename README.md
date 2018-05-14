@@ -25,7 +25,7 @@
 
   token, err := bucket.BorrowToken("key")
 
-  // when finish you job ,you should release the token
+  // when finish your job ,you should release the token
 
   bucket.ReleaseToken(token)
 
