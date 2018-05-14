@@ -16,13 +16,12 @@ package model
 
 import (
 	"errors"
-	"fmt"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	defaultMaxSize              = 10000
+	defaultMaxSize              = 500
 	defaultTimeout              = 3 * time.Second
 	BUCKET_TYPE_TRAFFIC_SHAPING = "traffic_shaping"
 	BUCKET_TYPE_RATE_LIMIT      = "rate_limit"
@@ -134,7 +133,6 @@ func (b *Bucket) produce() {
 		select {
 		case <-tick:
 			if vacantSize := atomic.LoadInt64(&b.vacantSize); vacantSize < b.maxSize {
-				fmt.Println(vacantSize, b.maxSize)
 				atomic.AddInt64(&b.vacantSize, 1)
 				go func() {
 					b.RWChan <- 1
