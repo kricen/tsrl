@@ -15,6 +15,7 @@
 package tsrl
 
 import (
+	"sync"
 	"time"
 
 	"github.com/kricen/tsrl/cmap"
@@ -24,6 +25,7 @@ import (
 //BucketPool : add , remove ,ReleaseToken ,BorrowToken
 type BucketPool struct {
 	bmap cmap.ConcurrentMap
+	rw   sync.RWMutex
 }
 
 //New :
@@ -37,15 +39,18 @@ func New() (pool *BucketPool) {
 func (b *BucketPool) GetBucket(url string) (bk *model.Bucket) {
 	tmp, ok := b.bmap.Get(url)
 	if !ok {
-		bk = b.AddBucket(url, 0, 0)
+		bk = b.AddBucket(url, 0, 0, model.BUCKET_TYPE_TRAFFIC_SHAPING)
 		return
 	}
 	bk, _ = tmp.(*model.Bucket)
 	return
 }
 
-// AddBucket : Add Traffic Shaping
-func (b *BucketPool) AddBucket(url string, maxSize int64, timeoutDuration time.Duration) (bk *model.Bucket) {
-
+// AddBucket : Add Traffic Shaping,default bucket type is traffic shaping
+func (b *BucketPool) AddBucket(url string, maxSize int64, timeoutDuration time.Duration, bucketType string) (bk *model.Bucket) {
+	b.rw.Lock()
+	defer b.rw.Unlock()
+	bk = model.New(maxSize, timeoutDuration, bucketType)
+	b.bmap.Set(url, bk)
 	return
 }
