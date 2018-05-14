@@ -21,7 +21,7 @@
 
   bucket := pool.AddBucket("hello", 500, 5*time.Second,model.BUCKET_TYPE_TRAFFIC_SHAPING)
 
-  // get the token from bucket and do the job you need to do
+  // get the token from bucket and do your job 
 
   token, err := bucket.BorrowToken("key")
 
